@@ -15,7 +15,7 @@ Currently this filter only works with pandoc versions lower than 2.10. If and wh
 
 The filter is written in [MoonScript][] which must be compiled to Lua with the `moonc` program to be used with Pandoc. If you want to do a pull request, or just hack on the filter, you should edit the [pandoc-list-table.moon](pandoc-list-table.moon) file, install MoonScript, then compile the filter code to Lua with `moonc pandoc-list-table.moon`, then check that your modifications work by running pandoc on suitable input with `pandoc-list-table.lua` specified as a Lua filter. **Don't modify `pandoc-list-table.lua` directly!**
 
-[MoonScript]: htrps://moonscript.org
+[MoonScript]: https://moonscript.org
 
 ## Usage
 
