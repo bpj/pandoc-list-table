@@ -1,3 +1,13 @@
+local filter_info = [==========[This is filter version 20201001
+
+This software is Copyright (c) 2020 by Benct Philip Jonsson.
+
+This is free software, licensed under:
+
+  The MIT (X11) License
+
+http://www.opensource.org/licenses/mit-license.php
+]==========]
 local concat, insert, pack, remove
 do
   local _obj_0 = table
@@ -8,6 +18,23 @@ floor = math.floor
 local assertion
 assertion = function(msg, val)
   return assert(val, msg)
+end
+local SimpleTable = pandoc.SimpleTable
+local Table = SimpleTable or pandoc.Table
+if not ('function' == type(SimpleTable)) then
+  if pandoc.types and PANDOC_VERSION then
+    local Version = pandoc.types.Version
+    if 'function' == type(Version) then
+      assertion("The pandoc-list-table filter does not work with Pandoc " .. tostring(PANDOC_VERSION), PANDOC_VERSION < Version('2.10.0'))
+    end
+  end
+end
+local call_func
+call_func = function(id, ...)
+  local res = pack(pcall(...))
+  assert(res[1], "Error " .. tostring(id) .. ": " .. tostring(res[2]))
+  remove(res, 1)
+  return unpack(res)
 end
 local contains_any
 contains_any = function(...)
@@ -182,8 +209,10 @@ do
     while #widths < col_count do
       widths[#widths + 1] = 0
     end
-    local ok, res = pcall(pandoc.Table, caption, aligns, widths, headers, rows)
-    assert(ok, "Error converting list to table in " .. tostring(div_id) .. ": " .. tostring(res))
+    local tab = call_func("converting  list to table in " .. tostring(div_id), Table, caption, aligns, widths, headers, rows)
+    if SimpleTable and 'SimpleTable' == tab.tag then
+      tab = call_func("converting SimpleTable to Table in " .. tostring(div_id), pandoc.utils.from_simple_table, tab)
+    end
     if contains_keep_div(div.classes) then
       local attr = div.attr
       local _list_2 = {
@@ -209,10 +238,10 @@ do
       end
       insert(attr.classes, 1, 'maybe-table2lol')
       return pandoc.Div({
-        res
+        tab
       }, attr)
     end
-    return res
+    return tab
   end
 end
 local table2lol
@@ -229,8 +258,11 @@ do
       return nil
     end
     local div_id = get_div_id('table2lol', div, div_count)
-    assertion("Expected " .. tostring(div_id) .. " to contain only a table", #div.content == 1 and is_elem(div.content[1], 'Table'))
+    assertion("Expected " .. tostring(div_id) .. " to contain only a table", #div.content == 1 and is_elem(div.content[1], 'Table', 'SimpleTable'))
     local tab = div.content[1]
+    if SimpleTable and 'SimpleTable' ~= tab.tag then
+      tab = call_func("converting Table to SimpleTable in " .. tostring(div_id), pandoc.utils.to_simple_table, tab)
+    end
     local caption, headers, rows = tab.caption, tab.headers, tab.rows
     local header = false
     for _index_0 = 1, #headers do
