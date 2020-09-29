@@ -277,6 +277,7 @@ If you include a class `keep-div` (or `keepdiv`) on the div the result will also
 :::
 ````
 
+````pandoc
 ::: {#alpha .maybe-table2lol .keep-div}
   foo   bar   baz
   ----- ----- -----
@@ -292,6 +293,7 @@ If you include a class `keep-div` (or `keepdiv`) on the div the result will also
     2.  tac
     3.  toc
 :::
+````
 
 ## Author
 
