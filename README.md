@@ -1,19 +1,80 @@
 # list-table
 
-This [Pandoc][] [filter][] allows to convert lists of lists (bullet lists and/or ordered lists) into tables. This makes it easier to type long tables and tables with "complicated" content because you don't need to draw any ASCII art.
+This [Pandoc][] [Lua filter][] allows to convert lists of lists (bullet lists and/or ordered lists) into tables. This makes it easier to type long tables and tables with "complicated" content because you don't need to draw any ASCII art.
 
 The filter can also convert tables to lists of lists, allowing full roundtripping.
 
 [Pandoc]: https://pandoc.org
-[filter]: https://pandoc.org/MANUAL.html#option--lua-filter
+[Lua filter]: https://pandoc.org/MANUAL.html#option--lua-filter
 
-## Warning
+## Version
 
-Currently this filter only works with pandoc versions lower than 2.10. If and when I get my head around the pandoc 2.10 table model I will update it so that it also works with pandoc >= 2.10 if it isn't too complicated. If someone already has a good grasp on the pandoc 2.10 table model pull requests are most welcome!
+This document describes filter version 20201001.
+
+## Compatibility
+
+With Pandoc version 2.10 Pandoc's internal representation of tables
+changed from the earlier simple model to a model which allows "complex" tables
+more similar to HTML tables (colspan/rowspan etc.), so that existing
+filters written to work with the old simple Table object don't work with
+Pandoc 2.10.0 and Pandoc 2.10.1 After Pandoc version
+2.10.1 the Lua filter engine supports, as a compatibility measure, a new
+SimpleTable object type similar to the old simple Table object, and provides
+functions to convert between SimpleTable objects and the new "complex" Table type. As of Pandoc 2.10.1 Pandoc's Markdown reader and writer do as yet not have any syntax supporting the new "complex" table features, and since it is not clear how this filter might support complex tables no support for the complex Table object type has been implemented in this filter either.
+
+Due to the changed table model in Pandoc 2.10 this filter does not work with
+Pandoc versions 2.10.0 and 2.10.1 inclusive. As of filter version 20201001
+(that's YYYYMMDD!) there is a check in place which uses the [SimpleTable][]
+constructor if it exists and throws an error if the [PANDOC_VERSION][] >= 2.10.0
+but SimpleTable does not exist. Thus the filter should work both with nightlies
+where SimpleTable exists and with the next release of Pandoc. If SimpleTable
+exists the `table2lol` implementation now tries to convert complex Table objects
+to SimpleTable objects, throwing an error with a hopefully helpful message if
+conversion fails, and at the other end the `lol2table` implementation converts a
+SimpleTable to a complex Table before returning (and also throws an error with a
+hopefully helpful message in the unlikely event that that conversion fails.)
+
+This should mean that when Pandoc's readers and writers start to support
+the new complex Table features this filter should still work unless you
+try to convert tables actually *using* those features to lists. In the future
+this filter may come to support at least some complex Table features along the
+lines suggested in [Issue #1][issue_1], but don't hold your breath for it!
+
+[issue_1]: https://git.io/JU1XR
+
+### A note on terminology
+
+In this README a distinction is made between the following terms:
+
+-   *complicated content* 
+
+    Table cell content which is hard or impossible to represent in the "ASCII
+    art" table syntaxes of Pandoc's Markdown.
+
+-   *complex Table*
+
+    The new Table object type in the Lua filter engine from Pandoc 2.10 and on,
+    which supports various HTML-like table features such as colspans and
+    rowspans. This filted does as of its version 20201001 not support these
+    features.
+
+-   *simple Table*
+
+    The old Table object type in the Lua filter engine before Pandoc 2.10,
+    which did not support the new "complex" table features. This filter
+    supports versions of Pandoc using this older Table object type.
+
+-   *SimpleTable*
+
+    The compatibility SimpleTable object type, similar to the old *simple Table*
+    object type supported by the Lua filter engine in versions of Pandoc later
+    than 2.10. This filter uses this object type when available.
 
 ## Contributing/hacking
 
-The filter is written in [MoonScript][] which must be compiled to Lua with the `moonc` program to be used with Pandoc. If you want to do a pull request, or just hack on the filter, you should edit the [pandoc-list-table.moon](pandoc-list-table.moon) file, install MoonScript, then compile the filter code to Lua with `moonc pandoc-list-table.moon`, then check that your modifications work by running pandoc on suitable input with `pandoc-list-table.lua` specified as a Lua filter. **Don't modify `pandoc-list-table.lua` directly!**
+**Don't modify `pandoc-list-table.lua` directly!**
+
+The filter is written in [MoonScript][] which must be compiled to Lua with the `moonc` program to be used with Pandoc. If you want to do a pull request, or just hack on the filter, you should edit the [pandoc-list-table.moon](pandoc-list-table.moon) file, install MoonScript, then compile the filter code to Lua with `moonc pandoc-list-table.moon`, then check that your modifications work by running pandoc on suitable input with `pandoc-list-table.lua` specified as a Lua filter.
 
 [MoonScript]: https://moonscript.org
 
@@ -245,3 +306,5 @@ This is free software, licensed under:
   The MIT (X11) License
 
 http://www.opensource.org/licenses/mit-license.php
+
+<!-- Vim: set et tw=80 ts=4 sts=4: -->

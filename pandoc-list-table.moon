@@ -1,7 +1,40 @@
+
+filter_info = [==========[
+This is filter version 20201001
+
+This software is Copyright (c) 2020 by Benct Philip Jonsson.
+
+This is free software, licensed under:
+
+  The MIT (X11) License
+
+http://www.opensource.org/licenses/mit-license.php
+]==========]
+
 import concat, insert, pack, remove from table
 import floor from math
 
 assertion = (msg, val) -> assert val, msg
+
+-- Check if we have SimpleTable
+SimpleTable = pandoc.SimpleTable
+Table = SimpleTable or pandoc.Table
+
+unless 'function' == type SimpleTable
+  if pandoc.types and PANDOC_VERSION
+    Version = pandoc.types.Version
+    -- If Version isn't a function Pandoc is surely less than 2.10
+    if 'function' == type Version
+      -- We know we haven't got SimpleTable, so now check if Pandoc < 2.10
+      assertion "The pandoc-list-table filter does not work with Pandoc #{PANDOC_VERSION}",
+        PANDOC_VERSION < Version '2.10.0'
+
+-- pcall with less boilerplate
+call_func = (id, ...) ->
+  res = pack pcall ...
+  assert res[1], "Error #{id}: #{res[2]}"
+  remove res, 1
+  return unpack res 
 
 -- contains_any(val1 [, val2, ...])
   -- returns a closure such that closure(x) returns
@@ -48,21 +81,21 @@ is_elem = (x, ...) ->
       return false
 
 -- get_div_id(cls, div [, div_count])
--- 
--- Takes the following arguments:
--- 
--- 1.  A string. May be a class name, something else which
---    migh serve as a "div type", or an empty string.
--- 
--- 2.  An actual Pandoc Div object.
--- 
--- 3.  An optional number, assumed to be the number of divs of
---     the same "type" already seen, including the current
---     one.
--- 
--- Returns a string of the form `<cls> div #<id>`, where
--- `<id>` is either the id attribute of `div`, or if
--- that is empty the `div_count`.
+  -- 
+  -- Takes the following arguments:
+  -- 
+  -- 1.  A string. May be a class name, something else which
+  --    migh serve as a "div type", or an empty string.
+  -- 
+  -- 2.  An actual Pandoc Div object.
+  -- 
+  -- 3.  An optional number, assumed to be the number of divs of
+  --     the same "type" already seen, including the current
+  --     one.
+  -- 
+  -- Returns a string of the form `<cls> div #<id>`, where
+  -- `<id>` is either the id attribute of `div`, or if
+  -- that is empty the `div_count`.
 
 get_div_id = (cls, div, div_count="") ->
   div_id = div.identifier or ""
@@ -187,9 +220,11 @@ lol2table = do
       -- Pad with auto widths if we got too few widths
       widths[#widths+1] = 0
     -- See if we can create a table
-    ok, res = pcall pandoc.Table, caption, aligns, widths, headers, rows
     -- and give a nice error message if we fail
-    assert ok, "Error converting list to table in #{div_id}: #{res}"
+    tab = call_func "converting  list to table in #{div_id}", Table, caption, aligns, widths, headers, rows
+    if SimpleTable and 'SimpleTable' == tab.tag
+      tab = call_func "converting SimpleTable to Table in #{div_id}",
+        pandoc.utils.from_simple_table, tab
     -- Do we want to keep the div?
     if contains_keep_div div.classes
       -- Reuse the attrs of the old div as far as possible!
@@ -205,9 +240,9 @@ lol2table = do
       -- should they want to!
       insert attr.classes, 1, 'maybe-table2lol'
       -- Return a div with the table and the attributes
-      return pandoc.Div {res}, attr
+      return pandoc.Div {tab}, attr
     -- Else don't keep the div, just return the table!
-    return res
+    return tab
 
 table2lol = do
   no_class = table2lol: true, 'no-header': true, noheader: true
@@ -217,8 +252,11 @@ table2lol = do
     return nil if #div.content == 0
     div_id = get_div_id 'table2lol', div, div_count
     assertion "Expected #{div_id} to contain only a table",
-      #div.content == 1 and is_elem div.content[1], 'Table'
+      #div.content == 1 and is_elem div.content[1], 'Table', 'SimpleTable'
     tab = div.content[1]
+    if SimpleTable and 'SimpleTable' ~= tab.tag
+      tab = call_func "converting Table to SimpleTable in #{div_id}",
+        pandoc.utils.to_simple_table, tab
     caption, headers, rows = tab.caption, tab.headers, tab.rows
     header = false
     for h in *headers
