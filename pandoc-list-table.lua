@@ -8,10 +8,10 @@ This is free software, licensed under:
 
 http://www.opensource.org/licenses/mit-license.php
 ]==========]
-local concat, insert, pack, remove
+local concat, insert, remove, pack, unpack
 do
   local _obj_0 = table
-  concat, insert, pack, remove = _obj_0.concat, _obj_0.insert, _obj_0.pack, _obj_0.remove
+  concat, insert, remove, pack, unpack = _obj_0.concat, _obj_0.insert, _obj_0.remove, _obj_0.pack, _obj_0.unpack
 end
 local floor
 floor = math.floor

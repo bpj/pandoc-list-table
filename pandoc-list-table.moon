@@ -11,7 +11,7 @@ This is free software, licensed under:
 http://www.opensource.org/licenses/mit-license.php
 ]==========]
 
-import concat, insert, pack, remove from table
+import concat, insert, remove, pack, unpack from table
 import floor from math
 
 assertion = (msg, val) -> assert val, msg
@@ -34,7 +34,7 @@ call_func = (id, ...) ->
   res = pack pcall ...
   assert res[1], "Error #{id}: #{res[2]}"
   remove res, 1
-  return unpack res 
+  return unpack res
 
 -- contains_any(val1 [, val2, ...])
   -- returns a closure such that closure(x) returns
@@ -81,18 +81,18 @@ is_elem = (x, ...) ->
       return false
 
 -- get_div_id(cls, div [, div_count])
-  -- 
+  --
   -- Takes the following arguments:
-  -- 
+  --
   -- 1.  A string. May be a class name, something else which
   --    migh serve as a "div type", or an empty string.
-  -- 
+  --
   -- 2.  An actual Pandoc Div object.
-  -- 
+  --
   -- 3.  An optional number, assumed to be the number of divs of
   --     the same "type" already seen, including the current
   --     one.
-  -- 
+  --
   -- Returns a string of the form `<cls> div #<id>`, where
   -- `<id>` is either the id attribute of `div`, or if
   -- that is empty the `div_count`.
