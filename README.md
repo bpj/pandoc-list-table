@@ -13,18 +13,23 @@ This document describes filter version 20201001.
 
 ## Compatibility
 
-With Pandoc version 2.10 Pandoc's internal representation of tables
-changed from the earlier simple model to a model which allows "complex" tables
-more similar to HTML tables (colspan/rowspan etc.), so that existing
-filters written to work with the old simple Table object don't work with
-Pandoc 2.10.0 and Pandoc 2.10.1 After Pandoc version
-2.10.1 the Lua filter engine supports, as a compatibility measure, a new
-SimpleTable object type similar to the old simple Table object, and provides
-functions to convert between SimpleTable objects and the new "complex" Table type. As of Pandoc 2.10.1 Pandoc's Markdown reader and writer do as yet not have any syntax supporting the new "complex" table features, and since it is not clear how this filter might support complex tables no support for the complex Table object type has been implemented in this filter either.
+With Pandoc version 2.10 Pandoc's internal representation of tables changed from
+the earlier simple model to a model which allows ["complex" tables](#a-note-on-terminology)
+more similar to HTML tables (colspan/rowspan etc.), so that existing filters
+written to work with the old simple Table object don't work with Pandoc 2.10.0
+and Pandoc 2.10.1 After Pandoc version 2.10.1 the Lua filter engine supports, as
+a compatibility measure, a new SimpleTable object type similar to the old simple
+Table object, and provides functions to convert between SimpleTable objects and
+the new "complex" Table type. As of Pandoc 2.10.1 Pandoc's Markdown reader and
+writer do as yet not have any syntax supporting the new "complex" table
+features, and since it is not clear how this filter might support complex tables
+no support for the complex Table object type has been implemented in this filter
+either.
 
 Due to the changed table model in Pandoc 2.10 this filter does not work with
 Pandoc versions 2.10.0 and 2.10.1 inclusive. As of filter version 20201001
 (that's YYYYMMDD!) there is a check in place which uses the [SimpleTable][]
+(see also the [SimpleTable pull request][])
 constructor if it exists and throws an error if the [PANDOC_VERSION][] >= 2.10.0
 but SimpleTable does not exist. Thus the filter should work both with nightlies
 where SimpleTable exists and with the next release of Pandoc. If SimpleTable
@@ -32,7 +37,7 @@ exists the `table2lol` implementation now tries to convert complex Table objects
 to SimpleTable objects, throwing an error with a hopefully helpful message if
 conversion fails, and at the other end the `lol2table` implementation converts a
 SimpleTable to a complex Table before returning (and also throws an error with a
-hopefully helpful message in the unlikely event that that conversion fails.)
+hopefully helpful message in the unlikely event that such a conversion fails.)
 
 This should mean that when Pandoc's readers and writers start to support
 the new complex Table features this filter should still work unless you
@@ -40,6 +45,9 @@ try to convert tables actually *using* those features to lists. In the future
 this filter may come to support at least some complex Table features along the
 lines suggested in [Issue #1][issue_1], but don't hold your breath for it!
 
+[SimpleTable]: https://pandoc.org/lua-filters.html#type-simpletable
+[SimpleTable pull request]: https://github.com/jgm/pandoc/pull/6575
+[PANDOC_VERSION]: https://pandoc.org/lua-filters.html#global-variables
 [issue_1]: https://git.io/JU1XR
 
 ### A note on terminology
