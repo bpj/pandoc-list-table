@@ -1,4 +1,4 @@
-::: {#alpha .table2lol .keep-div}
+::: {.maybe-table2lol .keep-div}
 +-------------+---------------------------+---------------------------+
 | foo         | bar                       | baz                       |
 +=============+===========================+===========================+
@@ -9,7 +9,7 @@
 : A table of stuff.
 :::
 
-::: {#beta .lol2table .keep-div align="d,d,d" widths="0,0,0"}
+::: {.maybe-lol2table .keep-div widths="0,0,0" align="d,d,d"}
 0.  1.  foo
     2.  bar
     3.  baz
@@ -19,7 +19,7 @@
     3.  toc
 :::
 
-::: {#gamma .lol2table .no-header .keepdiv align="d,d,d" widths="0,0,0"}
+::: {.maybe-lol2table .no-header .keep-div widths="0,0,0" align="d,d,d"}
 1.  1.  foo
     2.  bar
     3.  baz
