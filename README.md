@@ -9,8 +9,15 @@ The filter can also convert tables to lists of lists, allowing full roundtrippin
 
 ## Version
 
-This document describes filter version 20201001.
+This document describes filter version 202010012000.
 
+## Contributing/hacking
+
+**Don't modify `pandoc-list-table.lua` directly!**
+
+The filter is written in [MoonScript][] which must be compiled to Lua with the `moonc` program to be used with Pandoc. If you want to do a pull request, or just hack on the filter, you should edit the [pandoc-list-table.moon](pandoc-list-table.moon) file, install MoonScript, then compile the filter code to Lua with `moonc pandoc-list-table.moon`, then check that your modifications work by running pandoc on suitable input with `pandoc-list-table.lua` specified as a Lua filter.
+
+[MoonScript]: https://moonscript.org
 ## Compatibility
 
 With Pandoc version 2.10 Pandoc's internal representation of tables changed from
@@ -78,13 +85,6 @@ In this README a distinction is made between the following terms:
     object type supported by the Lua filter engine in versions of Pandoc later
     than 2.10. This filter uses this object type when available.
 
-## Contributing/hacking
-
-**Don't modify `pandoc-list-table.lua` directly!**
-
-The filter is written in [MoonScript][] which must be compiled to Lua with the `moonc` program to be used with Pandoc. If you want to do a pull request, or just hack on the filter, you should edit the [pandoc-list-table.moon](pandoc-list-table.moon) file, install MoonScript, then compile the filter code to Lua with `moonc pandoc-list-table.moon`, then check that your modifications work by running pandoc on suitable input with `pandoc-list-table.lua` specified as a Lua filter.
-
-[MoonScript]: https://moonscript.org
 
 ## Usage
 

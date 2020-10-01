@@ -1,4 +1,4 @@
-local filter_info = [==========[This is filter version 20201001
+local filter_info = [==========[This is filter version 202010012000
 
 This software is Copyright (c) 2020 by Benct Philip Jonsson.
 
