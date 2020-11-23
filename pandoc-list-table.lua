@@ -1,4 +1,4 @@
-local filter_info = [==========[This is filter version 202010012000
+local filter_info = [==========[This is filter version 20201124
 
 This software is Copyright (c) 2020 by Benct Philip Jonsson.
 
@@ -17,7 +17,8 @@ local floor
 floor = math.floor
 local assertion
 assertion = function(msg, val)
-  return assert(val, msg)
+  assert(val, msg)
+  return val
 end
 local SimpleTable = pandoc.SimpleTable
 local Table = SimpleTable or pandoc.Table
@@ -35,6 +36,22 @@ call_func = function(id, ...)
   assert(res[1], "Error " .. tostring(id) .. ": " .. tostring(res[2]))
   remove(res, 1)
   return unpack(res)
+end
+local keys
+keys = function(self)
+  assertion("Not a table: " .. tostring(type(self)) .. " " .. tostring(self), 'table' == type(self))
+  local _accum_0 = { }
+  local _len_0 = 1
+  for k in pairs(self) do
+    _accum_0[_len_0] = k
+    _len_0 = _len_0 + 1
+  end
+  return _accum_0
+end
+local round
+round = function(x)
+  x = assertion("Not a number: " .. tostring(x), tonumber(x))
+  return floor(x + 0.5)
 end
 local contains_any
 contains_any = function(...)
@@ -80,9 +97,44 @@ is_elem = function(x, ...)
         end
         return nil
       end
-      return true
     end
-    return false
+    return true
+  end
+  return false
+end
+local list_attributes
+list_attributes = function(self)
+  assertion("Not a table: " .. tostring(type(self)) .. " " .. tostring(self), 'table' == type(self))
+  return pandoc.ListAttributes(unpack(self))
+end
+local get_value
+get_value = function(...)
+  keys = pack(...)
+  assertion("Expected one or more key names as arguments", #keys > 0)
+  return function(self)
+    if not ('table' == type(self)) then
+      return nil
+    end
+    for _index_0 = 1, #keys do
+      local k = keys[_index_0]
+      if self[k] then
+        return self[k]
+      end
+    end
+    return nil
+  end
+end
+local remove_fields
+remove_fields = function(...)
+  keys = pack(...)
+  assertion("Expekted one or more field keys as arguments", #keys > 0)
+  return function(self)
+    assertion("Not a table: " .. tostring(type(self)) .. " " .. tostring(self), 'table' == type(self))
+    for _index_0 = 1, #keys do
+      local k = keys[_index_0]
+      self[k] = nil
+    end
+    return k
   end
 end
 local get_div_id
@@ -110,8 +162,54 @@ do
   end
   align2letter = _tbl_0
 end
-local contains_no_header = contains_any('no-header', 'noheader')
-local contains_keep_div = contains_any('keep-div', 'keepdiv')
+local contains_no_header = contains_any('no-header', 'noheader', 'no_header', 'noHeader')
+local contains_keep_div = contains_any('keep-div', 'keepdiv', 'keep_div', 'keepDiv')
+local get = {
+  align = {
+    'aligns',
+    'align',
+    'alignments',
+    'alignment'
+  },
+  widths = {
+    'widths',
+    'width'
+  },
+  list_start = {
+    'list-start',
+    'liststart',
+    'list_start',
+    'listStart'
+  },
+  sublist_start = {
+    'sublist-start',
+    'subliststart',
+    'sublist_start',
+    'sublistStart'
+  }
+}
+local remove_attrs
+do
+  local attrs
+  do
+    local _accum_0 = { }
+    local _len_0 = 1
+    for _, v in pairs(get) do
+      for _index_0 = 1, #v do
+        local a = v[_index_0]
+        _accum_0[_len_0] = a
+        _len_0 = _len_0 + 1
+      end
+    end
+    attrs = _accum_0
+  end
+  remove_attrs = remove_fields(unpack(attrs))
+end
+local _list_0 = keys_of(get)
+for _index_0 = 1, #_list_0 do
+  local a = _list_0[_index_0]
+  get[a] = get_value(unpack(get[a]))
+end
 local lol2table
 do
   local div_count = 0
@@ -119,11 +217,11 @@ do
     div_count = div_count + 1
     local div_id = get_div_id('lol2table', div, div_count)
     local lol, caption = nil, nil
-    local _list_0 = div.content
-    for _index_0 = 1, #_list_0 do
+    local _list_1 = div.content
+    for _index_0 = 1, #_list_1 do
       local _continue_0 = false
       repeat
-        local item = _list_0[_index_0]
+        local item = _list_1[_index_0]
         if not (is_elem(item)) then
           _continue_0 = true
           break
@@ -140,7 +238,7 @@ do
           end
           caption = item.content
         else
-          error("Didn't expect " .. tostring(item.tag) .. " in " .. tostring(div_id), 2)
+          error("Didn't expect " .. tostring(item.tag) .. " in " .. tostring(div_id))
         end
         _continue_0 = true
       until true
@@ -158,10 +256,10 @@ do
     local header = not (contains_no_header(div.classes))
     local rows = { }
     local col_count = 0
-    local _list_1 = lol.content
-    for _index_0 = 1, #_list_1 do
-      local item = _list_1[_index_0]
-      assertion("Expected list in " .. tostring(div_id) .. " to be list of lists", #item == 1 and is_elem(item[1], 'BulletList', 'OrderedList'))
+    local _list_2 = lol.content
+    for _index_0 = 1, #_list_2 do
+      local item = _list_2[_index_0]
+      assertion("Expected list in " .. tostring(div_id) .. " to be list of lists", (#item == 1) and is_elem(item[1], 'BulletList', 'OrderedList'))
       local row = item[1].content
       if #row > col_count then
         col_count = #row
@@ -181,7 +279,7 @@ do
       headers = { }
     end
     local aligns = { }
-    local align = (div.attributes.align or ""):lower()
+    local align = (get.align(div.attributes) or ""):lower()
     if "" == align then
       align = 'd'
     end
@@ -195,7 +293,7 @@ do
       aligns[#aligns + 1] = aligns[#aligns]
     end
     local widths = { }
-    local width = div.attributes.widths or ""
+    local width = get.widths(div.attributes) or ""
     if "" == width then
       width = '0'
     end
@@ -215,13 +313,10 @@ do
     end
     if contains_keep_div(div.classes) then
       local attr = div.attr
-      local _list_2 = {
-        'align',
-        'widths'
-      }
-      for _index_0 = 1, #_list_2 do
-        local key = _list_2[_index_0]
-        attr.attributes[key] = nil
+      do
+        local sublist_start = get.sublist_start(attr.attributes)
+        remove_attrs(attr.attributes)
+        attr.attributes['sublist-start'] = sublist_start
       end
       do
         local _accum_0 = { }
@@ -237,6 +332,9 @@ do
         attr.classes = _accum_0
       end
       insert(attr.classes, 1, 'maybe-table2lol')
+      if 'OrderedList' == lol.tag then
+        attr.attributes['start-num'] = lol.start
+      end
       return pandoc.Div({
         tab
       }, attr)
@@ -258,7 +356,7 @@ do
       return nil
     end
     local div_id = get_div_id('table2lol', div, div_count)
-    assertion("Expected " .. tostring(div_id) .. " to contain only a table", #div.content == 1 and is_elem(div.content[1], 'Table', 'SimpleTable'))
+    assertion("Expected " .. tostring(div_id) .. " to contain only a table", (#div.content == 1) and is_elem(div.content[1], 'Table', 'SimpleTable'))
     local tab = div.content[1]
     if SimpleTable and 'SimpleTable' ~= tab.tag then
       tab = call_func("converting Table to SimpleTable in " .. tostring(div_id), pandoc.utils.to_simple_table, tab)
@@ -271,6 +369,12 @@ do
         header = true
       end
     end
+    local list_attr = {
+      get.list_start(div.attributes)
+    }
+    local sublist_attr = {
+      get.sublist_start(div.attributes)
+    }
     local lol
     do
       local _accum_0 = { }
@@ -278,28 +382,27 @@ do
       for _index_0 = 1, #rows do
         local row = rows[_index_0]
         _accum_0[_len_0] = {
-          pandoc.OrderedList(row)
+          pandoc.OrderedList(row, list_attributes(sublist_attr))
         }
         _len_0 = _len_0 + 1
       end
       lol = _accum_0
     end
-    local list_attr = pandoc.ListAttributes()
     if header then
       insert(lol, 1, {
-        pandoc.OrderedList(headers)
+        pandoc.OrderedList(headers, list_attributes(sublist_attr))
       })
-      list_attr.start = 0
+      list_attr.start = list_attr.start or 0
     end
-    lol = pandoc.OrderedList(lol, list_attr)
+    lol = pandoc.OrderedList(lol, list_attributes(list_attr))
     if contains_keep_div(div.classes) then
       local cols = {
         align = (function()
           local _accum_0 = { }
           local _len_0 = 1
-          local _list_0 = tab.aligns
-          for _index_0 = 1, #_list_0 do
-            local a = _list_0[_index_0]
+          local _list_1 = tab.aligns
+          for _index_0 = 1, #_list_1 do
+            local a = _list_1[_index_0]
             _accum_0[_len_0] = align2letter[a]
             _len_0 = _len_0 + 1
           end
@@ -308,22 +411,26 @@ do
         widths = (function()
           local _accum_0 = { }
           local _len_0 = 1
-          local _list_0 = tab.widths
-          for _index_0 = 1, #_list_0 do
-            local w = _list_0[_index_0]
-            _accum_0[_len_0] = floor(w * 100)
+          local _list_1 = tab.widths
+          for _index_0 = 1, #_list_1 do
+            local w = _list_1[_index_0]
+            _accum_0[_len_0] = round(w * 100)
             _len_0 = _len_0 + 1
           end
           return _accum_0
         end)()
       }
+      set_attrs({
+        ['list-start'] = get.list_start(div.attributes),
+        ['sublist-start'] = get.sublist_start(div.attributes)
+      })
       local classes
       do
         local _accum_0 = { }
         local _len_0 = 1
-        local _list_0 = div.classes
-        for _index_0 = 1, #_list_0 do
-          local c = _list_0[_index_0]
+        local _list_1 = div.classes
+        for _index_0 = 1, #_list_1 do
+          local c = _list_1[_index_0]
           if not no_class[c] then
             _accum_0[_len_0] = c
             _len_0 = _len_0 + 1
@@ -341,9 +448,13 @@ do
       end
       insert(classes, 1, 'maybe-lol2table')
       local attr = div.attr
+      remove_attrs(attr.attributes)
       attr.classes = classes
       for key, list in pairs(cols) do
         attr.attributes[key] = concat(list, ",")
+      end
+      for key, val in pairs(set_attrs) do
+        attr.attributes[key] = val
       end
       return pandoc.Div({
         lol,

@@ -1,6 +1,6 @@
 
 filter_info = [==========[
-This is filter version 202010012000
+This is filter version 20201124
 
 This software is Copyright (c) 2020 by Benct Philip Jonsson.
 
@@ -14,7 +14,9 @@ http://www.opensource.org/licenses/mit-license.php
 import concat, insert, remove, pack, unpack from table
 import floor from math
 
-assertion = (msg, val) -> assert val, msg
+assertion = (msg, val) ->
+  assert val, msg
+  return val -- don't want the msg back!
 
 -- Check if we have SimpleTable
 SimpleTable = pandoc.SimpleTable
@@ -35,6 +37,19 @@ call_func = (id, ...) ->
   assert res[1], "Error #{id}: #{res[2]}"
   remove res, 1
   return unpack res
+
+-- get all keys in a table as an array
+keys = =>
+  assertion "Not a table: #{type @} #{@}",
+    'table' == type @
+  return [k for k in pairs @]
+
+-- round towards nearest integer
+-- XXX: we may end up with a total width somewhat greater than 100%. Is this bad?
+-- Probably better than the width decreasing each time!
+round = (x) ->
+  x = assertion "Not a number: #{x}", tonumber x
+  return floor x + 0.5
 
 -- contains_any(val1 [, val2, ...])
   -- returns a closure such that closure(x) returns
@@ -77,8 +92,42 @@ is_elem = (x, ...) ->
               if t == tag
                 return tag
             return nil
-          return true
-      return false
+      return true
+  return false
+
+-- convert an array to ListAttributes
+list_attributes = =>
+  assertion "Not a table: #{type @} #{@}", 'table' == type @
+  return pandoc.ListAttributes unpack @
+
+-- get_value(key1 [, key2...])
+-- Returns: a closure which if called closure(tab) returns
+--  - nil if tab is not a table
+--  - the value of the first key whose name matches one of key1...
+--  - nil if no key name matches.
+get_value = (...) ->
+  keys = pack ...
+  assertion "Expected one or more key names as arguments",
+    #keys > 0
+  return =>
+    return nil unless 'table' == type @
+    for k in *keys
+      return @[k] if @[k]
+    return nil
+
+-- remove_fields(key1 [, key2...])
+-- Returns a closure which if called closure(tab)
+--  - throws an error if tab is not a table.
+--  - removes (sets to nil) any and all fields whose key equals one of key1...
+--  - returns tab.
+remove_fields = (...) ->
+  keys = pack ...
+  assertion "Expekted one or more field keys as arguments", #keys > 0
+  return =>
+    assertion "Not a table: #{type @} #{@}", 'table' == type @
+    for k in *keys
+      @[k] = nil
+    return k
 
 -- get_div_id(cls, div [, div_count])
   --
@@ -113,8 +162,28 @@ letter2align = {
 align2letter = {v,k for k,v in pairs letter2align}
 
 -- Functions to look for variants of the 'magic' classes.
-contains_no_header = contains_any 'no-header', 'noheader'
-contains_keep_div = contains_any 'keep-div', 'keepdiv'
+contains_no_header = contains_any 'no-header',
+  'noheader',
+  'no_header',
+  'noHeader'
+
+contains_keep_div = contains_any 'keep-div',
+  'keepdiv',
+  'keep_div',
+  'keepDiv'
+
+-- Functions to look for variants of the "magic" attributes.
+get = {
+  align: {'aligns', 'align', 'alignments', 'alignment'}
+  widths: {'widths','width'}
+  list_start: {'list-start','liststart','list_start','listStart'}
+  sublist_start: {'sublist-start','subliststart','sublist_start','sublistStart'}
+}
+remove_attrs = do
+  attrs = [a for _,v in pairs get for a in *v]
+  remove_fields unpack attrs
+for a in *keys_of get
+  get[a] = get_value unpack get[a]
 
 -- Function to convert a list of lists to a table
 lol2table = do
@@ -146,7 +215,7 @@ lol2table = do
           caption = item.content
         else
           -- Complain if we see something other than a list or para
-          error "Didn't expect #{item.tag} in #{div_id}", 2
+          error "Didn't expect #{item.tag} in #{div_id}"
     -- Abort if we didn't see any list
     return nil unless lol
     -- The caption defaults to an empty list
@@ -164,13 +233,12 @@ lol2table = do
     for item in *lol.content
       -- Check that the item contains a list and nothing else
       assertion "Expected list in #{div_id} to be list of lists",
-        #item == 1 and is_elem item[1], 'BulletList', 'OrderedList'
+        (#item == 1) and is_elem item[1], 'BulletList', 'OrderedList'
       -- The items of the inner list are the next table row
       row = item[1].content
       -- If this row is longer than any seen before
       -- we update the column count
-      if #row > col_count
-        col_count = #row
+      col_count = #row if #row > col_count
       rows[#rows+1] = row
     -- Make sure all rows are the same length by adding empty
     -- cells until they are the same length as the longest row
@@ -186,7 +254,7 @@ lol2table = do
     -- Init the list of aligns
     aligns = {}
     -- Get the align attribute if any and coerce it to lowercase
-    align = (div.attributes.align or "")\lower!
+    align = (get.align(div.attributes) or "")\lower!
     -- If the align attr is empty it defaults to a single d
     align = 'd' if "" == align
     -- Now step through the comma-separated "items"
@@ -203,16 +271,15 @@ lol2table = do
       aligns[#aligns+1] = aligns[#aligns]
     -- Now do the same with widths
     widths = {}
-    width = div.attributes.widths or ""
+    width = get.widths(div.attributes) or ""
     -- Widths default to automatic widths
     width = '0' if "" == width
     for w in width\gmatch '[^,]+'
       -- A width is a percentage of the available total width,
-      -- tableso an integer with up to three digits
+      -- so an integer with up to three digits
       assertion "Expected column width in #{div_id} to be percentage, not '#{w}'",
         w\match '^[01]?%d?%d$'
-      -- Convert it to a float and append it to the
-      -- list of widths
+      -- Convert it to a float and append it to the list of widths
       widths[#widths+1] = tonumber(w, 10) / 100
       if #widths == col_count
         break
@@ -220,7 +287,8 @@ lol2table = do
       -- Pad with auto widths if we got too few widths
       widths[#widths+1] = 0
     -- See if we can create a table
-    -- and give a nice error message if we fail
+    -- and give a nice error message if we fail.
+    -- The Table var/func here may be SimpleTable!
     tab = call_func "converting  list to table in #{div_id}", Table, caption, aligns, widths, headers, rows
     if SimpleTable and 'SimpleTable' == tab.tag
       tab = call_func "converting SimpleTable to Table in #{div_id}",
@@ -229,16 +297,20 @@ lol2table = do
     if contains_keep_div div.classes
       -- Reuse the attrs of the old div as far as possible!
       attr = div.attr
-      -- Remove any old align/widths attrs since they may
+      -- Remove any old align/width/start-num attrs since they may
       -- become inaccurate if the table is altered.
-      for key in *{'align', 'widths'}
-        attr.attributes[key] = nil
+      do
+        sublist_start = get.sublist_start attr.attributes
+        remove_attrs attr.attributes
+        attr.attributes['sublist-start'] = sublist_start
       -- Remove the lol2table class which certainly is
       -- wrong now
       attr.classes = [c for c in *div.classes when 'lol2table' != c]
       -- but make it easy for the user to revert to a LoL
       -- should they want to!
       insert attr.classes, 1, 'maybe-table2lol'
+      -- See if we can get a start number
+      attr.attributes['start-num'] = lol.start if 'OrderedList' == lol.tag
       -- Return a div with the table and the attributes
       return pandoc.Div {tab}, attr
     -- Else don't keep the div, just return the table!
@@ -252,8 +324,9 @@ table2lol = do
     return nil if #div.content == 0
     div_id = get_div_id 'table2lol', div, div_count
     assertion "Expected #{div_id} to contain only a table",
-      #div.content == 1 and is_elem div.content[1], 'Table', 'SimpleTable'
+      (#div.content == 1) and is_elem div.content[1], 'Table', 'SimpleTable'
     tab = div.content[1]
+    -- Convert to SimpleTable if it isn't a simple Table already
     if SimpleTable and 'SimpleTable' ~= tab.tag
       tab = call_func "converting Table to SimpleTable in #{div_id}",
         pandoc.utils.to_simple_table, tab
@@ -261,16 +334,22 @@ table2lol = do
     header = false
     for h in *headers
       header = true if #h > 0
-    lol = [ {pandoc.OrderedList(row)} for row in *rows ]
-    list_attr = pandoc.ListAttributes!
+    list_attr = { get.list_start div.attributes }
+    sublist_attr = { get.sublist_start div.attributes }
+    lol = [ {pandoc.OrderedList(row, list_attributes sublist_attr)} for row in *rows ]
     if header
-      insert lol, 1, {pandoc.OrderedList(headers)}
-      list_attr.start = 0
-    lol = pandoc.OrderedList lol, list_attr
+      insert lol, 1,
+        {pandoc.OrderedList(headers, list_attributes sublist_attr)}
+      list_attr.start or= 0
+    lol = pandoc.OrderedList lol, list_attributes list_attr
     if contains_keep_div div.classes
       cols = {
         align:  [align2letter[a] for a in *tab.aligns]
-        widths: [floor(w * 100) for w in *tab.widths]
+        widths: [round(w * 100) for w in *tab.widths]
+      }
+      set_attrs {
+        'list-start': get.list_start div.attributes
+        'sublist-start': get.sublist_start div.attributes
       }
       classes = [ c for c in *div.classes when not no_class[c] ]
       caption = if #caption > 0
@@ -281,9 +360,12 @@ table2lol = do
         insert classes, 1, 'no-header'
       insert classes, 1, 'maybe-lol2table'
       attr = div.attr
+      remove_attrs attr.attributes
       attr.classes = classes
       for key, list in pairs cols
         attr.attributes[key] = concat list, ","
+      for key, val in pairs set_attrs
+        attr.attributes[key] = val
       return pandoc.Div {lol, caption}, attr
     return lol
 
