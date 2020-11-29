@@ -39,7 +39,7 @@ call_func = (id, ...) ->
   return unpack res
 
 -- get all keys in a table as an array
-keys = =>
+keys_of = =>
   assertion "Not a table: #{type @} #{@}",
     'table' == type @
   return [k for k in pairs @]

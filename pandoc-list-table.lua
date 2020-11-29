@@ -37,8 +37,8 @@ call_func = function(id, ...)
   remove(res, 1)
   return unpack(res)
 end
-local keys
-keys = function(self)
+local keys_of
+keys_of = function(self)
   assertion("Not a table: " .. tostring(type(self)) .. " " .. tostring(self), 'table' == type(self))
   local _accum_0 = { }
   local _len_0 = 1
@@ -109,7 +109,7 @@ list_attributes = function(self)
 end
 local get_value
 get_value = function(...)
-  keys = pack(...)
+  local keys = pack(...)
   assertion("Expected one or more key names as arguments", #keys > 0)
   return function(self)
     if not ('table' == type(self)) then
@@ -126,7 +126,7 @@ get_value = function(...)
 end
 local remove_fields
 remove_fields = function(...)
-  keys = pack(...)
+  local keys = pack(...)
   assertion("Expekted one or more field keys as arguments", #keys > 0)
   return function(self)
     assertion("Not a table: " .. tostring(type(self)) .. " " .. tostring(self), 'table' == type(self))
