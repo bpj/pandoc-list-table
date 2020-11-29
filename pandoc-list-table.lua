@@ -37,6 +37,14 @@ call_func = function(id, ...)
   remove(res, 1)
   return unpack(res)
 end
+local if_nil
+if_nil = function(a, b)
+  if nil == a then
+    return b
+  else
+    return a
+  end
+end
 local keys_of
 keys_of = function(self)
   assertion("Not a table: " .. tostring(type(self)) .. " " .. tostring(self), 'table' == type(self))
@@ -101,6 +109,20 @@ is_elem = function(x, ...)
     return true
   end
   return false
+end
+local is_index
+is_index = function(x)
+  do
+    local n = tonumber(x)
+    if n then
+      if floor(n) == n then
+        if 0 <= n then
+          return n
+        end
+      end
+    end
+  end
+  return nil
 end
 local list_attributes
 list_attributes = function(self)
@@ -369,12 +391,20 @@ do
         header = true
       end
     end
-    local list_attr = {
-      get.list_start(div.attributes)
-    }
-    local sublist_attr = {
-      get.sublist_start(div.attributes)
-    }
+    local list_attr
+    do
+      local s = get.list_start(div.attributes)
+      assertion("Expected list-start in " .. tostring(id) .. " to be non-negative integer", is_index(if_nil(s, 1)))
+      list_attr = list_attributes(s)
+    end
+    local sublist_attr
+    do
+      local s = get.sublist_start(div.attributes)
+      assertion("Expected sublist-start in " .. tostring(id) .. " to be non-negative integer", is_index(if_nil(s, 1)))
+      sublist_attr = {
+        s
+      }
+    end
     local lol
     do
       local _accum_0 = { }
@@ -394,7 +424,7 @@ do
       })
       list_attr.start = list_attr.start or 0
     end
-    lol = pandoc.OrderedList(lol, list_attributes(list_attr))
+    lol = pandoc.OrderedList(lol, list_attr)
     if contains_keep_div(div.classes) then
       local cols = {
         align = (function()

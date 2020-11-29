@@ -38,6 +38,7 @@ call_func = (id, ...) ->
   remove res, 1
   return unpack res
 
+if_nil = (a,b) -> if nil == a then b else a
 -- get all keys in a table as an array
 keys_of = =>
   assertion "Not a table: #{type @} #{@}",
@@ -94,6 +95,16 @@ is_elem = (x, ...) ->
             return nil
       return true
   return false
+
+-- is_index(x)
+-- Make sure x is a valid pandoc list index.
+-- Return nummified index
+is_index = (x) ->
+  if n = tonumber x
+    if floor(n) == n
+      if 0 <= n
+        return n
+  return nil
 
 -- convert an array to ListAttributes
 list_attributes = =>
@@ -334,14 +345,20 @@ table2lol = do
     header = false
     for h in *headers
       header = true if #h > 0
-    list_attr = { get.list_start div.attributes }
-    sublist_attr = { get.sublist_start div.attributes }
+    list_attr = do
+      s = get.list_start div.attributes
+      assertion "Expected list-start in #{id} to be non-negative integer", is_index if_nil s, 1
+      list_attributes s
+    sublist_attr = do
+      s = get.sublist_start div.attributes
+      assertion "Expected sublist-start in #{id} to be non-negative integer", is_index if_nil s, 1
+      { s }
     lol = [ {pandoc.OrderedList(row, list_attributes sublist_attr)} for row in *rows ]
     if header
       insert lol, 1,
         {pandoc.OrderedList(headers, list_attributes sublist_attr)}
       list_attr.start or= 0
-    lol = pandoc.OrderedList lol, list_attributes list_attr
+    lol = pandoc.OrderedList lol, list_attr
     if contains_keep_div div.classes
       cols = {
         align:  [align2letter[a] for a in *tab.aligns]
